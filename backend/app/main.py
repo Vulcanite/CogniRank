@@ -14,7 +14,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Interview Platform API", lifespan=lifespan)
+app = FastAPI(title="CogniRank API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

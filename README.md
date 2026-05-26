@@ -1,6 +1,6 @@
-# Interview Platform
+# CogniRank
 
-AI-native coding interview platform with a FastAPI backend, PostgreSQL persistence, a Next.js admin console, and a Monaco-powered candidate workspace.
+CogniRank is an AI-native coding interview platform with a FastAPI backend, PostgreSQL persistence, a Next.js admin console, and a Monaco-powered candidate workspace.
 
 The admin console supports authenticated access, reusable question-bank management, timed invite-gated rooms, live observer mode, AI prompt/configuration management, telemetry review, and generated interview reports. Candidates join with a room code plus invited email, solve one or more coding questions, and can use a restricted AI assistant.
 

@@ -47,7 +47,7 @@ export function AdminLogin({
               </div>
               <div>
                 <p className="text-sm font-semibold uppercase text-muted-foreground">Admin Console</p>
-                <h1 className="text-3xl font-semibold">Interview Control</h1>
+                <h1 className="text-3xl font-semibold">CogniRank</h1>
               </div>
             </div>
             <ThemeToggle />

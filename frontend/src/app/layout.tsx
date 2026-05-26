@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Interview Platform",
-  description: "AI-native developer evaluation platform",
+  title: "CogniRank",
+  description: "AI-native coding interview and developer evaluation platform",
 };
 
 export default function RootLayout({

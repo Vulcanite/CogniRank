@@ -42,7 +42,7 @@ export function AdminShell({
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Admin</p>
-              <p className="font-semibold">Interview Control</p>
+              <p className="font-semibold">CogniRank</p>
             </div>
           </Link>
 
