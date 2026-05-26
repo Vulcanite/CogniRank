@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+.venv/
+.env
+*.egg-info/
+
+node_modules/
+.next/
+.env.local
+dist/
+
+.DS_Store
+
+.antigravitycli/

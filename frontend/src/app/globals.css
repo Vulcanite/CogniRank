@@ -1,0 +1,73 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 38 31% 96%;
+    --foreground: 210 20% 10%;
+    --card: 40 33% 98%;
+    --card-foreground: 210 20% 10%;
+    --primary: 158 33% 22%;
+    --primary-foreground: 38 31% 96%;
+    --secondary: 28 44% 90%;
+    --secondary-foreground: 210 20% 10%;
+    --muted: 42 23% 90%;
+    --muted-foreground: 210 8% 38%;
+    --accent: 12 73% 58%;
+    --accent-foreground: 40 33% 98%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 34 20% 78%;
+    --input: 34 20% 78%;
+    --ring: 158 33% 22%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 30 12% 9%;
+    --foreground: 42 30% 92%;
+    --card: 32 12% 13%;
+    --card-foreground: 42 30% 92%;
+    --primary: 154 44% 64%;
+    --primary-foreground: 30 12% 9%;
+    --secondary: 32 13% 19%;
+    --secondary-foreground: 42 30% 92%;
+    --muted: 32 13% 18%;
+    --muted-foreground: 40 11% 68%;
+    --accent: 17 82% 63%;
+    --accent-foreground: 30 12% 9%;
+    --destructive: 0 72% 58%;
+    --destructive-foreground: 42 30% 92%;
+    --border: 32 12% 25%;
+    --input: 32 12% 25%;
+    --ring: 154 44% 64%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "liga" 1, "kern" 1;
+  }
+
+  ::selection {
+    @apply bg-accent text-accent-foreground;
+  }
+}
+
+@layer utilities {
+  .dashboard-grid {
+    background-image:
+      linear-gradient(hsl(var(--border) / 0.35) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--border) / 0.35) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+
+  .paper-panel {
+    background:
+      linear-gradient(135deg, hsl(var(--card) / 0.96), hsl(var(--secondary) / 0.5));
+  }
+}
