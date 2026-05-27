@@ -17,6 +17,8 @@ const emptyConfig: AIConfiguration = {
   system_prompt: "",
   report_prompt: "",
   force_brute_force: false,
+  reasoning_enabled: false,
+  reasoning_config_json: "{}",
   updated_at: "",
 };
 
@@ -117,6 +119,41 @@ export default function ConfigPage() {
                   <p className="text-xs text-muted-foreground">
                     When enabled, the AI assistant will only generate unoptimized brute-force code to test the candidate's code analysis capabilities.
                   </p>
+                </div>
+              </div>
+
+              <div className="rounded-md border bg-background/50 p-4">
+                <div className="flex items-start space-x-3">
+                  <input
+                    type="checkbox"
+                    id="reasoningEnabled"
+                    checked={config.reasoning_enabled}
+                    onChange={(event) => setConfig({ ...config, reasoning_enabled: event.target.checked })}
+                    className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                  />
+                  <div className="flex-1 space-y-3">
+                    <div>
+                      <label className="text-sm font-medium leading-none cursor-pointer" htmlFor="reasoningEnabled">
+                        Enable OpenRouter Reasoning Memory
+                      </label>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Stores provider reasoning details as hidden continuity metadata and replays them to reasoning-capable models.
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium" htmlFor="reasoningConfig">
+                        Reasoning JSON
+                      </label>
+                      <Textarea
+                        id="reasoningConfig"
+                        value={config.reasoning_config_json}
+                        onChange={(event) => setConfig({ ...config, reasoning_config_json: event.target.value })}
+                        rows={5}
+                        className="font-mono text-xs"
+                        required
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 

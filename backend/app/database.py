@@ -49,6 +49,18 @@ async def init_db() -> None:
         await conn.execute(
             text("ALTER TABLE ai_configuration ADD COLUMN IF NOT EXISTS force_brute_force BOOLEAN NOT NULL DEFAULT FALSE")
         )
+        await conn.execute(
+            text("ALTER TABLE ai_configuration ADD COLUMN IF NOT EXISTS reasoning_enabled BOOLEAN NOT NULL DEFAULT FALSE")
+        )
+        await conn.execute(
+            text("ALTER TABLE ai_configuration ADD COLUMN IF NOT EXISTS reasoning_config_json TEXT NOT NULL DEFAULT '{}'")
+        )
+        await conn.execute(
+            text("ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS question_id UUID")
+        )
+        await conn.execute(
+            text("ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS provider_metadata_json TEXT NOT NULL DEFAULT '{}'")
+        )
     async with async_session() as session:
         await seed_questions(session)
 

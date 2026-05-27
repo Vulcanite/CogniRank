@@ -53,6 +53,9 @@ async def create_or_update_report(
     existing = await get_report_for_session(session.id, db)
     assistant_messages = [message for message in messages if message.role == "assistant"]
     user_messages = [message for message in messages if message.role == "user"]
+    assistant_code_messages = [
+        message for message in assistant_messages if "```" in message.message or "<tool_call>" in message.message
+    ]
     code_snapshots = await get_code_snapshots(session.id, questions, db)
     final_code = "\n\n".join(snapshot.final_code for snapshot in code_snapshots)
     code_lines = len([line for line in final_code.splitlines() if line.strip()])
@@ -73,6 +76,7 @@ async def create_or_update_report(
         "questions_changed_from_template": changed_questions,
         "chat_turns": len(user_messages),
         "assistant_turns": len(assistant_messages),
+        "assistant_code_messages": len(assistant_code_messages),
         "tokens_used": session.tokens_used,
         "max_tokens": room.max_tokens,
         "non_empty_code_lines": code_lines,
@@ -100,6 +104,15 @@ async def create_or_update_report(
         user_prompt_content += "\nCandidate's Final Submissions:\n"
         for snapshot in code_snapshots:
             user_prompt_content += f"- Question: {snapshot.question_title}\n  Final Code:\n{snapshot.final_code}\n"
+
+        user_prompt_content += "\nAssistant Involvement Facts:\n"
+        if assistant_code_messages:
+            user_prompt_content += (
+                f"- Assistant produced code in {len(assistant_code_messages)} message(s). "
+                "Do not describe the final implementation as independently written by the candidate unless the transcript clearly supports that.\n"
+            )
+        else:
+            user_prompt_content += "- No assistant code block messages detected.\n"
 
         user_prompt_content += "\nCandidate Observed Telemetry Facts:\n"
         for flag in flags:
@@ -146,8 +159,9 @@ async def create_or_update_report(
         summary = (
             f"{session.candidate_name} completed '{room.title}' covering {question_titles}. "
             f"The final per-question snapshots have {code_lines} non-empty code lines, with "
-            f"{changed_questions} question(s) changed from starter templates. The candidate used "
-            f"{session.tokens_used} of {room.max_tokens} AI tokens across {len(user_messages)} prompts. "
+            f"{changed_questions} question(s) changed from starter templates and "
+            f"{len(user_messages)} candidate chat prompt(s). Assistant code block messages: "
+            f"{len(assistant_code_messages)}. "
             "This report is based on saved code and chat history only; no sandbox execution was run."
         )
     if not recommendation:

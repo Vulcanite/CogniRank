@@ -69,6 +69,7 @@ export type ChatMessage = {
   role: "user" | "assistant";
   message: string;
   timestamp: string;
+  question_id?: string | null;
 };
 
 export type SessionState = {
@@ -101,6 +102,8 @@ export type AIConfiguration = {
   system_prompt: string;
   report_prompt: string;
   force_brute_force: boolean;
+  reasoning_enabled: boolean;
+  reasoning_config_json: string;
   updated_at: string;
 };
 
@@ -386,6 +389,7 @@ export function updateAIConfiguration(payload: AIConfigurationPayload, token: st
 export async function streamChat(
   sessionId: string,
   message: string,
+  questionId: string | null,
   onToken: (content: string) => void,
   onDone: (data: { tokens_used: number; max_tokens: number; token_limit_hit: boolean }) => void,
   onError: (detail: string) => void,
@@ -394,7 +398,7 @@ export async function streamChat(
   const response = await fetch(`${API_URL}/api/session/${sessionId}/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...candidateHeaders(access) },
-    body: JSON.stringify({ message }),
+    body: JSON.stringify({ message, question_id: questionId }),
   });
 
   if (!response.ok) {

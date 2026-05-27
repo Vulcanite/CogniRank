@@ -30,10 +30,7 @@ async def authorize_candidate_access(
     session_token: str | None,
     client_id: str | None,
 ) -> None:
-    if session.status != "active":
-        return
-
-    if not client_id:
+    if session.status == "active" and not client_id:
         raise HTTPException(status_code=403, detail="Invalid or expired interview link")
 
     if session.candidate_access_token_hash:
@@ -42,6 +39,9 @@ async def authorize_candidate_access(
         token_hash = hash_candidate_token(session_token)
         if not hmac.compare_digest(token_hash, session.candidate_access_token_hash):
             raise HTTPException(status_code=403, detail="Invalid or expired interview link")
+
+    if session.status != "active":
+        return
 
     now = utc_now()
     if (

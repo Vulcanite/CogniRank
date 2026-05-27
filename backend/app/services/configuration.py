@@ -21,6 +21,8 @@ async def get_ai_configuration(db: AsyncSession) -> AIConfiguration:
         system_prompt=SYSTEM_PROMPT,
         report_prompt=DEFAULT_REPORT_PROMPT,
         force_brute_force=False,
+        reasoning_enabled=False,
+        reasoning_config_json="{}",
     )
     db.add(config)
     await db.commit()

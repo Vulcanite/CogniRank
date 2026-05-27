@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { AdminSessionDetail, AdminSessionSummary, closeAdminSession, getAdminSession, listAdminSessions } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useAdminAuth } from "@/lib/use-admin-auth";
+import ReactMarkdown from "react-markdown";
 
 export default function HistoryPage() {
   const { token, user, ready, acceptLogin } = useAdminAuth();
@@ -186,9 +187,8 @@ export default function HistoryPage() {
                     </Button>
                   </div>
                 </div>
-                <div className="mt-5 grid gap-3 md:grid-cols-4">
+                <div className="mt-5 grid gap-3 md:grid-cols-3">
                   <Metric label="Questions" value={selected.question_count.toString()} />
-                  <Metric label="Tokens" value={`${selected.tokens_used}`} />
                   <Metric label="Timer" value={selectedRemaining ?? `${selected.duration_minutes} min`} />
                   <Metric label="Report" value={selected.report ? "Ready" : "Pending"} />
                 </div>
@@ -221,7 +221,9 @@ export default function HistoryPage() {
                           <p className="text-sm text-muted-foreground">Recommendation</p>
                           <p className="mt-1 text-xl font-semibold">{selected.report.recommendation}</p>
                         </div>
-                        <p className="rounded-md border bg-background/70 p-4 text-sm leading-7">{selected.report.summary}</p>
+                        <div className="prose prose-sm max-w-none rounded-md border bg-background/70 p-4 dark:prose-invert">
+                          <ReactMarkdown>{selected.report.summary}</ReactMarkdown>
+                        </div>
                         <pre className="overflow-auto rounded-md border bg-background/70 p-4 text-xs text-muted-foreground">
                           {JSON.stringify(selected.report.rubric, null, 2)}
                         </pre>
@@ -275,7 +277,9 @@ export default function HistoryPage() {
                       {selected.report ? (
                         <div className="mt-2 space-y-2 text-sm">
                           <p className="font-semibold">{selected.report.recommendation}</p>
-                          <p className="leading-6 text-muted-foreground">{selected.report.summary}</p>
+                          <div className="prose prose-sm max-w-none text-muted-foreground dark:prose-invert">
+                            <ReactMarkdown>{selected.report.summary}</ReactMarkdown>
+                          </div>
                         </div>
                       ) : (
                         <p className="mt-2 text-sm text-muted-foreground">End the session to generate code evaluation.</p>

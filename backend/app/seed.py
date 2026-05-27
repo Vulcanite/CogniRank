@@ -178,6 +178,8 @@ async def seed_questions(db: AsyncSession) -> None:
                 system_prompt=SYSTEM_PROMPT,
                 report_prompt=DEFAULT_REPORT_PROMPT,
                 force_brute_force=False,
+                reasoning_enabled=False,
+                reasoning_config_json="{}",
             )
         )
 

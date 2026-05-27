@@ -322,14 +322,13 @@ export default function AdminPage() {
               <Link
                 key={session.session_id}
                 href={`/admin/history?session=${session.session_id}`}
-                className="grid gap-3 rounded-md border bg-background/70 p-3 text-sm transition hover:border-primary/60 md:grid-cols-[1fr_130px_160px_120px]"
+                className="grid gap-3 rounded-md border bg-background/70 p-3 text-sm transition hover:border-primary/60 md:grid-cols-[1fr_130px_120px]"
               >
                 <span>
                   <span className="font-medium">{session.candidate_name}</span>
                   <span className="ml-2 text-muted-foreground">{session.room_title}</span>
                 </span>
                 <span className="text-muted-foreground">{formatRemaining(session.expires_at, session.status, now)}</span>
-                <span className="text-muted-foreground">{session.tokens_used} tokens</span>
                 <span className={session.report_ready ? "text-primary" : "text-muted-foreground"}>
                   {session.report_ready ? "Report ready" : displayStatus(session.status)}
                 </span>

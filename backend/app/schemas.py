@@ -1,14 +1,28 @@
 import uuid
 from datetime import datetime
+import json
+from urllib.parse import urlparse
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
+
+
+ALLOWED_TELEMETRY_EVENTS = {
+    "typing_speed_sample",
+    "tab_visibility_changed",
+    "copy_attempt_blocked",
+    "cut_attempt_blocked",
+    "paste_attempt_blocked",
+    "copy_shortcut_blocked",
+    "cut_shortcut_blocked",
+    "paste_shortcut_blocked",
+}
 
 
 class RoomCreateRequest(BaseModel):
-    org_name: str = "Default Organization"
-    title: str
-    problem_statement: str | None = None
-    sample_input_output: str | None = None
+    org_name: str = Field(default="Default Organization", min_length=1, max_length=160)
+    title: str = Field(min_length=1, max_length=160)
+    problem_statement: str | None = Field(default=None, max_length=20000)
+    sample_input_output: str | None = Field(default=None, max_length=10000)
     max_tokens: int = Field(gt=0)
     invite_email: EmailStr
     duration_minutes: int = Field(default=60, gt=0)
@@ -27,20 +41,20 @@ class QuestionResponse(BaseModel):
 
 
 class QuestionCreateRequest(BaseModel):
-    title: str = Field(min_length=1)
+    title: str = Field(min_length=1, max_length=160)
     difficulty: str = Field(pattern="^(Easy|Medium|Hard)$")
-    prompt: str = Field(min_length=1)
-    sample_input_output: str = Field(min_length=1)
-    starter_code: str = ""
+    prompt: str = Field(min_length=1, max_length=20000)
+    sample_input_output: str = Field(min_length=1, max_length=10000)
+    starter_code: str = Field(default="", max_length=100000)
     tags: list[str] = Field(default_factory=list)
 
 
 class QuestionUpdateRequest(BaseModel):
-    title: str | None = Field(default=None, min_length=1)
+    title: str | None = Field(default=None, min_length=1, max_length=160)
     difficulty: str | None = Field(default=None, pattern="^(Easy|Medium|Hard)$")
-    prompt: str | None = Field(default=None, min_length=1)
-    sample_input_output: str | None = Field(default=None, min_length=1)
-    starter_code: str | None = None
+    prompt: str | None = Field(default=None, min_length=1, max_length=20000)
+    sample_input_output: str | None = Field(default=None, min_length=1, max_length=10000)
+    starter_code: str | None = Field(default=None, max_length=100000)
     tags: list[str] | None = None
 
 
@@ -56,7 +70,7 @@ class RoomCreateResponse(BaseModel):
 
 class RoomJoinRequest(BaseModel):
     room_code: str = Field(min_length=6, max_length=6)
-    candidate_name: str
+    candidate_name: str = Field(min_length=1, max_length=120)
     candidate_email: EmailStr
 
 
@@ -75,12 +89,12 @@ class RoomJoinResponse(BaseModel):
 
 
 class SyncCodeRequest(BaseModel):
-    current_code: str
+    current_code: str = Field(max_length=200000)
     question_id: uuid.UUID | None = None
 
 
 class LiveCodeRequest(BaseModel):
-    current_code: str
+    current_code: str = Field(max_length=200000)
     question_id: uuid.UUID
 
 
@@ -94,16 +108,32 @@ class SessionHeartbeatResponse(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    message: str = Field(min_length=1)
+    message: str = Field(min_length=1, max_length=4000)
+    question_id: uuid.UUID | None = None
 
 
 class TelemetryRequest(BaseModel):
     event_type: str = Field(min_length=1, max_length=80)
     metadata: dict = Field(default_factory=dict)
 
+    @field_validator("event_type")
+    @classmethod
+    def event_type_must_be_known(cls, value: str) -> str:
+        if value not in ALLOWED_TELEMETRY_EVENTS:
+            raise ValueError("Unsupported telemetry event")
+        return value
+
+    @field_validator("metadata")
+    @classmethod
+    def metadata_must_be_bounded(cls, value: dict) -> dict:
+        if len(json.dumps(value, default=str)) > 4096:
+            raise ValueError("Telemetry metadata is too large")
+        return value
+
 
 class ChatMessageResponse(BaseModel):
     id: uuid.UUID
+    question_id: uuid.UUID | None = None
     role: str
     message: str
     timestamp: datetime
@@ -144,15 +174,38 @@ class AIConfigurationResponse(BaseModel):
     system_prompt: str
     report_prompt: str
     force_brute_force: bool
+    reasoning_enabled: bool
+    reasoning_config_json: str
     updated_at: datetime
 
 
 class AIConfigurationUpdateRequest(BaseModel):
-    api_url: str = Field(min_length=1)
-    model: str = Field(min_length=1)
-    system_prompt: str = Field(min_length=1)
-    report_prompt: str = Field(min_length=1)
+    api_url: str = Field(min_length=1, max_length=500)
+    model: str = Field(min_length=1, max_length=200)
+    system_prompt: str = Field(min_length=1, max_length=20000)
+    report_prompt: str = Field(min_length=1, max_length=20000)
     force_brute_force: bool = Field(default=False)
+    reasoning_enabled: bool = Field(default=False)
+    reasoning_config_json: str = Field(default="{}", max_length=10000)
+
+    @field_validator("api_url")
+    @classmethod
+    def api_url_must_be_http(cls, value: str) -> str:
+        parsed = urlparse(value)
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            raise ValueError("AI API URL must be an HTTP(S) URL")
+        return value.rstrip("/")
+
+    @field_validator("reasoning_config_json")
+    @classmethod
+    def reasoning_config_must_be_json_object(cls, value: str) -> str:
+        try:
+            parsed = json.loads(value or "{}")
+        except json.JSONDecodeError as exc:
+            raise ValueError("Reasoning config must be valid JSON") from exc
+        if not isinstance(parsed, dict):
+            raise ValueError("Reasoning config must be a JSON object")
+        return json.dumps(parsed)
 
 
 class InterviewReportResponse(BaseModel):

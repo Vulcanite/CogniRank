@@ -1,7 +1,7 @@
 "use client";
 
 import Editor from "@monaco-editor/react";
-import { CircleStop, Clock3, AlertCircle, X } from "lucide-react";
+import { CircleStop, Clock3, AlertCircle, X, FileInput } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 
@@ -34,6 +34,28 @@ function createPageInstanceId() {
     return crypto.randomUUID();
   }
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function extractCodeBlocks(message: string) {
+  const blocks: Array<{ language: string; code: string }> = [];
+  const regex = /```([\w+-]*)\n([\s\S]*?)```/g;
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(message)) !== null) {
+    blocks.push({
+      language: match[1] || "text",
+      code: match[2].trimEnd(),
+    });
+  }
+  return blocks;
+}
+
+function stripCodeBlocks(message: string) {
+  return message
+    .replace(/<tool_call>[\s\S]*?<\/assistant>/g, "")
+    .replace(/<tool_call>[\s\S]*?$/g, "")
+    .replace(/```[\w+-]*\n[\s\S]*?```/g, "")
+    .replace(/<\/?(tool_call|assistant)>/g, "")
+    .trim();
 }
 
 export default function InterviewDashboard({ sessionId }: InterviewDashboardProps) {
@@ -145,6 +167,10 @@ export default function InterviewDashboard({ sessionId }: InterviewDashboardProp
   const activeQuestion = questions.find((question) => question.id === activeQuestionId) ?? questions[0];
   const sessionComplete = status !== "active";
   const activeCode = activeQuestion ? codeByQuestion[activeQuestion.id] ?? activeQuestion.starter_code : "";
+
+  const filteredMessages = useMemo(() => {
+    return messages.filter((msg) => !msg.question_id || msg.question_id === activeQuestionId);
+  }, [messages, activeQuestionId]);
 
   useEffect(() => {
     return () => {
@@ -333,6 +359,17 @@ export default function InterviewDashboard({ sessionId }: InterviewDashboardProp
     debouncedSync(activeQuestion.id, nextCode);
   }
 
+  async function applyAssistantCode(nextCode: string) {
+    if (!activeQuestion || sessionComplete) return;
+    setCodeByQuestion((current) => ({ ...current, [activeQuestion.id]: nextCode }));
+    debouncedLiveSync(activeQuestion.id, nextCode);
+    try {
+      await syncCode(sessionId, nextCode, activeQuestion.id, access);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to apply code");
+    }
+  }
+
   async function handleSendMessage(event: React.FormEvent) {
     event.preventDefault();
     if (!chatInput.trim() || streaming || sessionComplete) return;
@@ -347,6 +384,7 @@ export default function InterviewDashboard({ sessionId }: InterviewDashboardProp
       role: "user",
       message: userMessage,
       timestamp: new Date().toISOString(),
+      question_id: activeQuestionId ?? undefined,
     };
     setMessages((prev) => [...prev, optimisticUser]);
 
@@ -356,6 +394,7 @@ export default function InterviewDashboard({ sessionId }: InterviewDashboardProp
       await streamChat(
         sessionId,
         userMessage,
+        activeQuestionId,
         (content) => {
           assistantReply += content;
           setStreamingText(assistantReply);
@@ -378,6 +417,7 @@ export default function InterviewDashboard({ sessionId }: InterviewDashboardProp
             role: "assistant",
             message: finalReply,
             timestamp: new Date().toISOString(),
+            question_id: activeQuestionId ?? undefined,
           },
         ];
       });
@@ -571,14 +611,18 @@ export default function InterviewDashboard({ sessionId }: InterviewDashboardProp
         <aside className="col-span-3 flex min-h-0 flex-col">
           <ScrollArea className="flex-1 p-4">
             <div className="space-y-4">
-              {messages.map((msg) => (
+              {filteredMessages.map((msg) => (
                 <div
                   key={msg.id}
                   className={`rounded-lg p-3 text-sm ${
                     msg.role === "user" ? "ml-6 bg-primary text-primary-foreground" : "mr-6 bg-muted"
                   }`}
                 >
-                  {msg.message}
+                  {msg.role === "assistant" ? (
+                    <AssistantMessage message={msg.message} onApplyCode={applyAssistantCode} disabled={sessionComplete} />
+                  ) : (
+                    msg.message
+                  )}
                 </div>
               ))}
               {streamingText && (
@@ -669,6 +713,45 @@ export default function InterviewDashboard({ sessionId }: InterviewDashboardProp
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function AssistantMessage({
+  message,
+  onApplyCode,
+  disabled,
+}: {
+  message: string;
+  onApplyCode: (code: string) => void;
+  disabled: boolean;
+}) {
+  const blocks = extractCodeBlocks(message);
+  const displayText = stripCodeBlocks(message);
+  return (
+    <div className="space-y-3">
+      {displayText && <div className="whitespace-pre-wrap leading-6">{displayText}</div>}
+      {blocks.map((block, index) => (
+        <div key={`${block.language}-${index}`} className="overflow-hidden rounded-md border bg-background/70">
+          <div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b bg-background px-3 py-2">
+            <span className="text-xs font-medium uppercase text-muted-foreground">{block.language}</span>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled={disabled}
+              onClick={() => onApplyCode(block.code)}
+              className="h-8 shrink-0"
+            >
+              <FileInput className="h-4 w-4" />
+              Apply to Editor
+            </Button>
+          </div>
+          <pre className="max-h-52 overflow-auto p-3 text-xs">
+            <code>{block.code}</code>
+          </pre>
+        </div>
+      ))}
     </div>
   );
 }

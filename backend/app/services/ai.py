@@ -5,12 +5,16 @@ CONSTRAINTS & RULES:
 2. You can only output code when the candidate explicitly specifies the exact algorithm, approach, or pseudocode, and provides a logical justification for why they want to use that approach.
 3. If the candidate asks you to code a solution without specifying the approach and explaining the 'why', you must refuse and explain that they must first explain their algorithm choice and reasoning.
 4. When writing code, write ONLY the implementation of the specific algorithm requested. Do not suggest optimizations or alternative solutions.
-5. Keep conversational responses under 3 sentences. Be professional, direct, and act strictly as an instruction-following coding engine for the user's design."""
+5. Generated code must not contain comments unless the candidate explicitly asks for comments.
+6. Keep conversational responses under 3 sentences. Be professional, direct, and act strictly as an instruction-following coding engine for the user's design."""
 
 DEFAULT_AI_URL = "https://openrouter.ai/api/v1"
 
 DEFAULT_REPORT_PROMPT = """Generate a concise interview report from the candidate's final code, chat transcript, question set, and observed facts (telemetry blocks).
 Assess algorithmic reasoning, code optimization, independence, and communication.
+Do not claim the candidate chose an inefficient approach if the transcript shows they identified or described a better approach and the assistant generated different code.
+If an assistant message contains code or the final code appears to come from assistant output, do not say the candidate wrote the complete solution independently. Credit the candidate for stated approach, data-structure choices, and corrections; credit the assistant separately for generated implementation.
+Treat telemetry as signals only; do not infer intent such as cheating or distraction from tab exits or clipboard blocks.
 Respond ONLY with a valid JSON object in this format (do not return any markdown code blocks or additional text):
 {
   "summary": "Detailed summary paragraph here describing their performance and technical/conversational details...",
@@ -23,6 +27,7 @@ async def stream_chat_completion(
     api_url: str,
     model: str,
     messages: list[dict[str, str]],
+    reasoning: dict | None = None,
 ):
     from openai import AsyncOpenAI
 
@@ -36,11 +41,16 @@ async def stream_chat_completion(
         },
     )
 
+    kwargs = {}
+    if reasoning:
+        kwargs["extra_body"] = {"reasoning": reasoning}
+
     stream = await client.chat.completions.create(
         model=model,
         messages=messages,
         stream=True,
         stream_options={"include_usage": True},
+        **kwargs,
     )
 
     async for chunk in stream:

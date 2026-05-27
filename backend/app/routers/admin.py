@@ -35,6 +35,8 @@ def _serialize_ai_config(config) -> AIConfigurationResponse:
         system_prompt=config.system_prompt,
         report_prompt=config.report_prompt,
         force_brute_force=config.force_brute_force,
+        reasoning_enabled=config.reasoning_enabled,
+        reasoning_config_json=config.reasoning_config_json,
         updated_at=config.updated_at,
     )
 
@@ -60,6 +62,8 @@ async def update_config(
     config.system_prompt = payload.system_prompt
     config.report_prompt = payload.report_prompt
     config.force_brute_force = payload.force_brute_force
+    config.reasoning_enabled = payload.reasoning_enabled
+    config.reasoning_config_json = payload.reasoning_config_json
     touch_ai_configuration(config)
     db.add(config)
     await db.commit()
@@ -226,6 +230,7 @@ async def get_session_detail(
         messages=[
             ChatMessageResponse(
                 id=message.id,
+                question_id=message.question_id,
                 role=message.role,
                 message=message.message,
                 timestamp=message.timestamp,
