@@ -3,7 +3,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.config import settings
 from app.models import LLMConfiguration, Question, Room, Session, utc_now
-from app.services.ai import (
+from app.services.llm import (
     DEFAULT_BRUTE_FORCE_PROMPT,
     DEFAULT_CHAT_CONTEXT_PROMPT,
     DEFAULT_REPORT_PROMPT,

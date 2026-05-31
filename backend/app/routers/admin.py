@@ -20,7 +20,7 @@ from app.schemas import (
 )
 from app.services.auth import require_admin
 from app.config import settings
-from app.services.ai import list_available_models
+from app.services.llm import list_available_models
 from app.services.code_snapshots import get_code_by_question, get_code_snapshots
 from app.services.configuration import get_llm_configuration, touch_llm_configuration
 from app.services.live_code import live_code_hub

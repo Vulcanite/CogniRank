@@ -21,7 +21,7 @@ from app.schemas import (
     SyncCodeResponse,
     TelemetryRequest,
 )
-from app.services.ai import stream_chat_completion
+from app.services.llm import stream_chat_completion
 from app.services.candidate_access import authorize_candidate_access
 from app.services.code_snapshots import get_code_by_question, update_question_code
 from app.services.configuration import get_llm_configuration
