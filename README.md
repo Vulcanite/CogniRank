@@ -13,7 +13,7 @@ The admin console supports authenticated access, reusable question-bank manageme
 | Frontend | Next.js 16, React 19, TypeScript, Tailwind CSS |
 | Editor | Monaco via `@monaco-editor/react` |
 | AI client | OpenAI Python SDK pointed at an OpenAI-compatible base URL |
-| Default AI URL | `https://openrouter.ai/api/v1` |
+| Default LLM provider URL | `https://openrouter.ai/api/v1` |
 
 ## Repository Layout
 
@@ -25,7 +25,7 @@ backend/
     main.py                    # FastAPI app, CORS, routers
     models.py                  # SQLModel table definitions
     schemas.py                 # request/response DTOs
-    seed.py                    # default question bank and AI config seed
+    seed.py                    # default question bank and LLM config seed
     routers/
       admin.py                 # admin config, history, reports, live-code stream
       auth.py                  # admin login/refresh
@@ -37,7 +37,7 @@ backend/
       auth.py                  # signed admin bearer tokens
       candidate_access.py      # candidate token and single active client lease
       code_snapshots.py        # per-question code, starter/final diff
-      configuration.py         # AI configuration persistence
+      configuration.py         # LLM configuration persistence
       live_code.py             # in-process SSE publish/subscribe hub
       reports.py               # report generation and fallback summary
       room_code.py             # unique 6-character room codes
@@ -73,6 +73,7 @@ frontend/
 ## Prerequisites
 
 - Python 3.11+
+- uv
 - Node.js 20+
 - PostgreSQL 16, either through Docker Compose or a local service
 
@@ -90,8 +91,9 @@ Important backend variables:
 | Variable | Default / Purpose |
 | --- | --- |
 | `DATABASE_URL` | `postgresql+asyncpg://interview:interview@localhost:5432/interview_platform` |
-| `OPENROUTER_API_KEY` | Required for AI chat and LLM report generation |
-| `OPENROUTER_MODEL` | Default model used when the AI config row is first seeded |
+| `LLM_PROVIDER_KEY` | Required for AI chat, model fetching, and LLM report generation unless configured in Settings |
+| `LLM_PROVIDER_URL` | OpenAI-compatible provider base URL used when the LLM config row is first seeded |
+| `LLM_PROVIDER_MODEL` | Default model used when the LLM config row is first seeded |
 | `CORS_ORIGINS` | Frontend origins allowed by FastAPI |
 | `ADMIN_USERNAME` / `ADMIN_PASSWORD` | Local admin credentials |
 | `ADMIN_SECRET_KEY` | HMAC signing key for admin bearer tokens |
@@ -126,10 +128,8 @@ Start the backend:
 
 ```bash
 cd backend
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
+uv sync
+uv run uvicorn app.main:app --reload --port 8000
 ```
 
 Start the frontend:
@@ -166,7 +166,7 @@ Active tables:
 | `session_question_codes` | Per-session, per-question final code snapshots |
 | `chat_messages` | Candidate and assistant transcript |
 | `interview_reports` | One generated report per session |
-| `ai_configuration` | Runtime AI URL, model, system prompt, report prompt, brute-force flag |
+| `llm_configuration` | Runtime LLM URL, model, system prompt, report prompt, brute-force flag |
 | `telemetry_events` | Session telemetry events and metadata |
 
 Relationship outline:
@@ -183,7 +183,7 @@ sessions.id -> interview_reports.session_id
 sessions.id -> telemetry_events.session_id
 ```
 
-`backend/app/database.py` creates the async engine from `DATABASE_URL`, initializes `async_session`, calls `SQLModel.metadata.create_all`, applies a small set of `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` compatibility updates, then seeds default questions and default AI configuration.
+`backend/app/database.py` creates the async engine from `DATABASE_URL`, initializes `async_session`, calls `SQLModel.metadata.create_all`, applies a small set of `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` compatibility updates, then seeds default questions and default LLM configuration.
 
 Pending / not started: a formal migration tool such as Alembic is not configured. Schema evolution is currently handled in `init_db()`.
 
@@ -267,7 +267,7 @@ Operational note: `LiveCodeHub` is process-local. It works for a single backend 
 
 ## AI Behavior
 
-The backend uses `openai.AsyncOpenAI` with a configurable `base_url`, so it can call OpenRouter or another OpenAI-compatible provider.
+The backend uses `openai.AsyncOpenAI` with a configurable `base_url`, so it can call any OpenAI-compatible provider. Configure it with `LLM_PROVIDER_KEY`, `LLM_PROVIDER_URL`, and `LLM_PROVIDER_MODEL`.
 
 Default chat prompt in `backend/app/services/ai.py`:
 
@@ -331,8 +331,8 @@ Blocked attempts are sent to telemetry while the session is active.
 | `POST` | `/api/questions` | admin | Create question |
 | `PUT` | `/api/questions/{question_id}` | admin | Update question |
 | `DELETE` | `/api/questions/{question_id}` | admin | Delete unused question |
-| `GET` | `/api/admin/config` | admin | Read AI configuration |
-| `PUT` | `/api/admin/config` | admin | Update AI configuration |
+| `GET` | `/api/admin/config` | admin | Read LLM configuration |
+| `PUT` | `/api/admin/config` | admin | Update LLM configuration |
 | `GET` | `/api/admin/sessions` | admin | List inactive, active, completed, and expired rounds |
 | `GET` | `/api/admin/sessions/{session_id}` | admin | Fetch round detail, transcript, telemetry, report, code snapshots |
 | `GET` | `/api/admin/sessions/{session_id}/live-code` | admin | SSE stream of live code updates |
@@ -376,7 +376,7 @@ If a developer needs non-default Docker/Postgres names, override them with envir
 PGHOST=localhost PGPORT=5432 POSTGRES_USER=interview POSTGRES_PASSWORD=interview POSTGRES_DB=interview_platform scripts/restore-db.sh --yes db_dumps/interview_platform_current.sql
 ```
 
-Clear room/session history while preserving the question bank, organizations, and AI configuration:
+Clear room/session history while preserving the question bank, organizations, and LLM configuration:
 
 ```bash
 cd backend
