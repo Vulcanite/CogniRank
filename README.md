@@ -33,12 +33,13 @@ backend/
       rooms.py                 # room creation and candidate join
       sessions.py              # session state, code sync, chat, telemetry, end
     services/
-      ai.py                    # OpenAI SDK chat/report calls
       auth.py                  # signed admin bearer tokens
       candidate_access.py      # candidate token and single active client lease
       code_snapshots.py        # per-question code, starter/final diff
       configuration.py         # LLM configuration persistence
       live_code.py             # in-process SSE publish/subscribe hub
+      llm.py                   # OpenAI SDK chat/report calls
+      questions.py             # question querying and serialization
       reports.py               # report generation and fallback summary
       room_code.py             # unique 6-character room codes
       session_lifecycle.py     # completion/expiry handling
@@ -55,13 +56,21 @@ frontend/
     admin/questions/page.tsx               # question bank management
     interview/[sessionId]/page.tsx         # candidate interview route
     join/page.tsx                          # candidate room-code entry
+    globals.css                            # global styles and design tokens
     layout.tsx                             # theme bootstrap and app shell
+    page.tsx                               # main landing page with navigation
   src/components/
     admin-login.tsx
     admin-shell.tsx
     interview-dashboard.tsx
     theme-toggle.tsx
     ui/
+      badge.tsx                            # custom badge component
+      button.tsx                           # custom button component
+      card.tsx                             # custom card component
+      input.tsx                            # custom input text component
+      scroll-area.tsx                      # custom scroll container component
+      textarea.tsx                         # custom textarea text component
   src/lib/
     admin-auth.ts
     api.ts
@@ -269,7 +278,7 @@ Operational note: `LiveCodeHub` is process-local. It works for a single backend 
 
 The backend uses `openai.AsyncOpenAI` with a configurable `base_url`, so it can call any OpenAI-compatible provider. Configure it with `LLM_PROVIDER_KEY`, `LLM_PROVIDER_URL`, and `LLM_PROVIDER_MODEL`.
 
-Default chat prompt in `backend/app/services/ai.py`:
+Default chat prompt in `backend/app/services/llm.py`:
 
 ```text
 You are a restricted coding assistant. Your primary task is to write code for the candidate, but ONLY under strict conditions.
@@ -279,12 +288,16 @@ CONSTRAINTS & RULES:
 2. You can only output code when the candidate explicitly specifies the exact algorithm, approach, or pseudocode, and provides a logical justification for why they want to use that approach.
 3. If the candidate asks you to code a solution without specifying the approach and explaining the 'why', you must refuse and explain that they must first explain their algorithm choice and reasoning.
 4. When writing code, write ONLY the implementation of the specific algorithm requested. Do not suggest optimizations or alternative solutions.
-5. Keep conversational responses under 3 sentences. Be professional, direct, and act strictly as an instruction-following coding engine for the user's design.
+5. Generated code must not contain comments unless the candidate explicitly asks for comments.
+6. When explaining a question, explain only the objective, inputs, outputs, constraints, and examples. Do not name or imply the algorithmic strategy, data structures, complexity target, pointer technique, recurrence, traversal order, or implementation plan.
+7. Do not provide "high-level approach suggestions." Instead, ask the candidate what approach and data structures they would use.
+8. If the candidate repeats an approach you previously suggested, do not treat it as independently identified. Ask them to justify it in their own words.
+9. Keep conversational responses under 3 sentences. Be professional, direct, and act strictly as an instruction-following coding engine for the user's design.
 ```
 
 When `force_brute_force` is enabled in `/admin/config`, the backend appends an additional directive instructing the assistant to generate only unoptimized brute-force implementations.
 
-Report generation uses the configured report prompt and asks the model for JSON with `summary` and `recommendation`. If the LLM call fails or returns unusable output, the backend creates a deterministic fallback report from saved code, chat count, and telemetry flags.
+Report generation uses the configured report prompt and asks the model for JSON with `summary`, `code_evaluation`, and `recommendation`. If the LLM call fails or returns unusable output, the backend creates a deterministic fallback report from saved code, chat count, and telemetry flags.
 
 ## Telemetry
 
@@ -304,6 +317,7 @@ Events currently recorded:
 - `paste_shortcut_blocked`
 - `chat_user_message`
 - `chat_assistant_message`
+- `ai_provider_error`
 - `session_ended`
 - `session_ended_by_admin`
 - `session_expired`
@@ -333,6 +347,7 @@ Blocked attempts are sent to telemetry while the session is active.
 | `DELETE` | `/api/questions/{question_id}` | admin | Delete unused question |
 | `GET` | `/api/admin/config` | admin | Read LLM configuration |
 | `PUT` | `/api/admin/config` | admin | Update LLM configuration |
+| `POST` | `/api/admin/config/models` | admin | List available LLM provider models |
 | `GET` | `/api/admin/sessions` | admin | List inactive, active, completed, and expired rounds |
 | `GET` | `/api/admin/sessions/{session_id}` | admin | Fetch round detail, transcript, telemetry, report, code snapshots |
 | `GET` | `/api/admin/sessions/{session_id}/live-code` | admin | SSE stream of live code updates |
