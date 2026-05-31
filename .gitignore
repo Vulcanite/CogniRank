@@ -3,6 +3,11 @@ __pycache__/
 .venv/
 .env
 *.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
 
 node_modules/
 .next/
@@ -10,5 +15,8 @@ node_modules/
 dist/
 
 .DS_Store
+*.log
 
 .antigravitycli/
+.agents/
+.codex/
