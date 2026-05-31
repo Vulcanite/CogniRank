@@ -168,44 +168,69 @@ class AdminLoginResponse(BaseModel):
     username: str
 
 
-class AIConfigurationResponse(BaseModel):
+class LLMConfigurationResponse(BaseModel):
     api_url: str
+    api_key_configured: bool = False
     model: str
     system_prompt: str
+    chat_context_prompt: str
+    brute_force_prompt: str
     report_prompt: str
     force_brute_force: bool
-    reasoning_enabled: bool
-    reasoning_config_json: str
     updated_at: datetime
 
 
-class AIConfigurationUpdateRequest(BaseModel):
+class LLMConfigurationUpdateRequest(BaseModel):
     api_url: str = Field(min_length=1, max_length=500)
+    api_key: str | None = Field(default=None, max_length=4000)
     model: str = Field(min_length=1, max_length=200)
     system_prompt: str = Field(min_length=1, max_length=20000)
+    chat_context_prompt: str = Field(min_length=1, max_length=20000)
+    brute_force_prompt: str = Field(min_length=1, max_length=20000)
     report_prompt: str = Field(min_length=1, max_length=20000)
     force_brute_force: bool = Field(default=False)
-    reasoning_enabled: bool = Field(default=False)
-    reasoning_config_json: str = Field(default="{}", max_length=10000)
 
     @field_validator("api_url")
     @classmethod
     def api_url_must_be_http(cls, value: str) -> str:
         parsed = urlparse(value)
         if parsed.scheme not in {"http", "https"} or not parsed.netloc:
-            raise ValueError("AI API URL must be an HTTP(S) URL")
+            raise ValueError("LLM provider URL must be an HTTP(S) URL")
         return value.rstrip("/")
 
-    @field_validator("reasoning_config_json")
+    @field_validator("api_key")
     @classmethod
-    def reasoning_config_must_be_json_object(cls, value: str) -> str:
-        try:
-            parsed = json.loads(value or "{}")
-        except json.JSONDecodeError as exc:
-            raise ValueError("Reasoning config must be valid JSON") from exc
-        if not isinstance(parsed, dict):
-            raise ValueError("Reasoning config must be a JSON object")
-        return json.dumps(parsed)
+    def api_key_blank_means_unchanged(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        stripped = value.strip()
+        return stripped or None
+
+class LLMModelListRequest(BaseModel):
+    api_url: str | None = Field(default=None, max_length=500)
+    api_key: str | None = Field(default=None, max_length=4000)
+
+    @field_validator("api_url")
+    @classmethod
+    def optional_api_url_must_be_http(cls, value: str | None) -> str | None:
+        if value is None or not value.strip():
+            return None
+        parsed = urlparse(value)
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            raise ValueError("LLM provider URL must be an HTTP(S) URL")
+        return value.rstrip("/")
+
+    @field_validator("api_key")
+    @classmethod
+    def optional_api_key_blank_means_missing(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        stripped = value.strip()
+        return stripped or None
+
+
+class LLMModelListResponse(BaseModel):
+    models: list[str]
 
 
 class InterviewReportResponse(BaseModel):

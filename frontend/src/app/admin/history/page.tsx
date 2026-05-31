@@ -98,8 +98,8 @@ export default function HistoryPage() {
 
   return (
     <AdminShell user={user}>
-      <div className="grid gap-6 xl:grid-cols-[390px_minmax(0,1fr)]">
-        <section className="rounded-lg border bg-card/95 p-5 shadow-sm xl:sticky xl:top-28 xl:flex xl:h-[calc(100vh-8rem)] xl:flex-col">
+      <div className="page-enter grid gap-6 xl:grid-cols-[390px_minmax(0,1fr)]">
+        <section className="surface-panel rounded-sm p-5 xl:sticky xl:top-28 xl:flex xl:h-[calc(100vh-8rem)] xl:flex-col">
           <div className="flex items-center justify-between gap-3">
             <div>
               <h2 className="text-xl font-semibold">Round History</h2>
@@ -116,17 +116,17 @@ export default function HistoryPage() {
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search rounds" className="pl-9" />
           </div>
-          {error && <p className="mt-4 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
-          <div className="mt-4 min-h-0 flex-1 space-y-2 overflow-auto pr-1">
-            {loading && <p className="rounded-md border bg-background/70 p-4 text-sm text-muted-foreground">Loading history...</p>}
+          {error && <p className="mt-4 rounded-sm border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
+          <div className="list-enter mt-4 min-h-0 flex-1 space-y-2 overflow-auto pr-1">
+            {loading && <p className="rounded-sm border bg-background/70 p-4 text-sm text-muted-foreground">Loading history...</p>}
             {filteredSessions.map((session) => (
               <button
                 key={session.session_id}
                 type="button"
                 onClick={() => chooseSession(session.session_id)}
                 className={cn(
-                  "w-full rounded-md border bg-background/70 p-3 text-left transition hover:border-primary/60",
-                  selected?.session_id === session.session_id && "border-primary bg-primary/10"
+                  "interactive-lift w-full rounded-sm border bg-background/70 p-3 text-left hover:border-primary/50 hover:shadow-md hover:shadow-primary/10",
+                  selected?.session_id === session.session_id && "border-primary bg-primary/10 shadow-sm shadow-primary/10"
                 )}
               >
                 <span className="flex items-center justify-between gap-3">
@@ -155,10 +155,10 @@ export default function HistoryPage() {
 
         <section className="space-y-5">
           {!selected ? (
-            <div className="rounded-lg border bg-card/95 p-8 text-sm text-muted-foreground">Select a round to inspect.</div>
+            <div className="surface-panel rounded-sm p-8 text-sm text-muted-foreground">Select a round to inspect.</div>
           ) : (
             <>
-              <div className="rounded-lg border bg-card/95 p-5 shadow-sm">
+              <div className="surface-panel rounded-sm p-5">
                 <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
@@ -195,7 +195,7 @@ export default function HistoryPage() {
               </div>
 
               {selected.suspicious_flags && selected.suspicious_flags.length > 0 && (
-                <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-5 text-amber-900 dark:text-amber-200">
+                <div className="rounded-sm border border-amber-500/30 bg-amber-500/10 p-5 text-amber-900 dark:text-amber-200">
                   <div className="flex items-start gap-3">
                     <ShieldAlert className="mt-0.5 h-5 w-5 text-amber-500 shrink-0" />
                     <div>
@@ -217,19 +217,22 @@ export default function HistoryPage() {
                 <CollapsibleSection title="Interview Report" icon={<FileText className="h-5 w-5 text-primary" />} defaultOpen>
                     {selected.report ? (
                       <div className="mt-4 space-y-4">
-                        <div className="rounded-md border bg-background/70 p-4">
+                        <div className="rounded-sm border bg-background/70 p-4">
                           <p className="text-sm text-muted-foreground">Recommendation</p>
                           <p className="mt-1 text-xl font-semibold">{selected.report.recommendation}</p>
                         </div>
-                        <div className="prose prose-sm max-w-none rounded-md border bg-background/70 p-4 dark:prose-invert">
-                          <ReactMarkdown>{selected.report.summary}</ReactMarkdown>
+                        <div className="prose prose-sm max-w-none rounded-sm border bg-background/70 p-4 dark:prose-invert">
+                          <ReactMarkdown>{cleanReportSummary(selected.report.summary)}</ReactMarkdown>
                         </div>
-                        <pre className="overflow-auto rounded-md border bg-background/70 p-4 text-xs text-muted-foreground">
-                          {JSON.stringify(selected.report.rubric, null, 2)}
-                        </pre>
+                        <div className="grid gap-3 md:grid-cols-4">
+                          <Metric label="Questions" value={`${selected.report.rubric.question_count ?? selected.question_count}`} />
+                          <Metric label="Changed" value={`${selected.report.rubric.questions_changed_from_template ?? 0}`} />
+                          <Metric label="Chat Turns" value={`${selected.report.rubric.chat_turns ?? 0}`} />
+                          <Metric label="Assistant Replies" value={`${selected.report.rubric.assistant_turns ?? 0}`} />
+                        </div>
                       </div>
                     ) : (
-                      <div className="mt-4 rounded-md border border-dashed bg-background/70 p-5 text-sm text-muted-foreground">
+                      <div className="mt-4 rounded-sm border border-dashed bg-background/70 p-5 text-sm text-muted-foreground">
                         End the session to generate the report.
                       </div>
                     )}
@@ -238,7 +241,7 @@ export default function HistoryPage() {
                 <CollapsibleSection title="Final Code and Template Diff" icon={<GitCompare className="h-5 w-5 text-primary" />} defaultOpen>
                     <div className="mt-4 space-y-4">
                       {selected.code_snapshots.map((snapshot, index) => (
-                        <div key={snapshot.question_id} className="rounded-md border bg-background/70">
+                        <div key={snapshot.question_id} className="rounded-sm border bg-background/70">
                           <div className="border-b p-3">
                             <p className="text-xs text-muted-foreground">Question {index + 1}</p>
                             <p className="font-medium">{snapshot.question_title}</p>
@@ -272,13 +275,17 @@ export default function HistoryPage() {
                         </div>
                       ))}
                     </div>
-                    <div className="mt-5 rounded-md border bg-background/70 p-4">
-                      <p className="text-xs font-medium uppercase text-muted-foreground">Code Evaluation by AI</p>
+                    <div className="mt-5 rounded-sm border bg-background/70 p-4">
+                      <p className="text-xs font-medium uppercase text-muted-foreground">Code Evaluation</p>
                       {selected.report ? (
-                        <div className="mt-2 space-y-2 text-sm">
-                          <p className="font-semibold">{selected.report.recommendation}</p>
-                          <div className="prose prose-sm max-w-none text-muted-foreground dark:prose-invert">
-                            <ReactMarkdown>{selected.report.summary}</ReactMarkdown>
+                        <div className="mt-3 space-y-4 text-sm">
+                          <div className="grid gap-3 md:grid-cols-3">
+                            <Metric label="Changed" value={`${selected.report.rubric.questions_changed_from_template ?? 0}/${selected.question_count}`} />
+                            <Metric label="Code Lines" value={`${selected.report.rubric.non_empty_code_lines ?? 0}`} />
+                            <Metric label="LLM Code Blocks" value={`${selected.report.rubric.assistant_code_messages ?? 0}`} />
+                          </div>
+                          <div className="prose prose-sm max-w-none rounded-sm border bg-card/60 p-4 text-muted-foreground dark:prose-invert">
+                            <ReactMarkdown>{getCodeEvaluation(selected)}</ReactMarkdown>
                           </div>
                         </div>
                       ) : (
@@ -290,7 +297,7 @@ export default function HistoryPage() {
                 <CollapsibleSection title="Question Set" icon={<CheckCircle2 className="h-5 w-5 text-primary" />}>
                     <div className="mt-4 space-y-3">
                       {selected.questions.map((question, index) => (
-                        <div key={question.id} className="rounded-md border bg-background/70 p-3">
+                        <div key={question.id} className="rounded-sm border bg-background/70 p-3">
                           <p className="text-xs text-muted-foreground">Question {index + 1}</p>
                           <p className="mt-1 font-medium">{question.title}</p>
                           <pre className="mt-2 whitespace-pre-wrap text-xs text-muted-foreground">{question.sample_input_output}</pre>
@@ -301,7 +308,7 @@ export default function HistoryPage() {
 
                 <CollapsibleSection title="Transcript" icon={<MessageSquareText className="h-5 w-5 text-primary" />}>
                     <div className="flex flex-col gap-3">
-                      <div className="flex rounded-md border bg-background p-1">
+                      <div className="flex rounded-sm border bg-background p-1">
                         {(["all", "user", "assistant"] as const).map((item) => (
                           <button
                             key={item}
@@ -320,7 +327,7 @@ export default function HistoryPage() {
                     </div>
                     <div className="mt-4 max-h-[560px] space-y-3 overflow-auto pr-1">
                       {filteredMessages.map((message) => (
-                        <div key={message.id} className="rounded-md border bg-background/70 p-3 text-sm">
+                        <div key={message.id} className="rounded-sm border bg-background/70 p-3 text-sm">
                           <p className="mb-1 text-xs uppercase text-muted-foreground">{message.role}</p>
                           <p className="leading-6">{message.message}</p>
                         </div>
@@ -335,7 +342,7 @@ export default function HistoryPage() {
                     </p>
                     <div className="mt-4 max-h-80 space-y-2 overflow-auto pr-1">
                       {selected.telemetry.map((event) => (
-                        <div key={event.id} className="rounded-md border bg-background/70 p-3 text-xs">
+                        <div key={event.id} className="rounded-sm border bg-background/70 p-3 text-xs">
                           <div className="flex items-center justify-between gap-3">
                             <span className="font-medium">{event.event_type}</span>
                             <span className="text-muted-foreground">{new Date(event.timestamp).toLocaleString()}</span>
@@ -355,15 +362,15 @@ export default function HistoryPage() {
       </div>
 
       {endConfirmOpen && selected && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
+        <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-md">
           <section
             role="dialog"
             aria-modal="true"
             aria-labelledby="admin-end-session-title"
-            className="w-full max-w-md rounded-lg border bg-card p-5 shadow-2xl shadow-black/25"
+            className="surface-panel modal-panel w-full max-w-md rounded-sm p-5"
           >
             <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-destructive/10 text-destructive">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm bg-destructive/10 text-destructive">
                 <CircleStop className="h-5 w-5" />
               </div>
               <div>
@@ -375,7 +382,7 @@ export default function HistoryPage() {
                 </p>
               </div>
             </div>
-            <div className="mt-4 rounded-md border bg-background/70 p-3 text-sm">
+            <div className="mt-4 rounded-sm border bg-background/70 p-3 text-sm">
               <p className="font-medium">{selected.room_title}</p>
               <p className="mt-1 text-muted-foreground">Room {selected.room_code} · {selectedRemaining ?? selected.status}</p>
             </div>
@@ -412,6 +419,30 @@ function displayStatus(status: string) {
   return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
+function cleanReportSummary(summary: string) {
+  return summary
+    .replace(/<\/assistant>\s*\{[\s\S]*$/i, "")
+    .replace(/<\/assistant>/gi, "")
+    .trim();
+}
+
+function getCodeEvaluation(session: AdminSessionDetail) {
+  const evaluation = session.report?.rubric?.code_evaluation;
+  if (typeof evaluation === "string" && evaluation.trim()) return evaluation;
+
+  const changed = Number(session.report?.rubric?.questions_changed_from_template ?? 0);
+  const lines = Number(session.report?.rubric?.non_empty_code_lines ?? 0);
+  const assistantCode = Number(session.report?.rubric?.assistant_code_messages ?? 0);
+
+  if (!lines) return "No final code was synced for evaluation.";
+
+  return [
+    `Final code was captured for ${changed} of ${session.question_count} question(s), with ${lines} non-empty line(s).`,
+    `Assistant code block messages detected: ${assistantCode}.`,
+    "Review the final code and template diff in this section for correctness, complexity, edge-case handling, and implementation quality. No sandbox execution results are attached to this report.",
+  ].join("\n\n");
+}
+
 function CollapsibleSection({
   title,
   icon,
@@ -424,8 +455,8 @@ function CollapsibleSection({
   children: ReactNode;
 }) {
   return (
-    <details className="rounded-lg border bg-card/95 p-5 shadow-sm" open={defaultOpen}>
-      <summary className="flex cursor-pointer list-none items-center gap-2">
+    <details className="surface-panel rounded-sm p-5" open={defaultOpen}>
+      <summary className="flex cursor-pointer list-none items-center gap-2 transition-colors hover:text-primary">
         {icon}
         <h3 className="text-lg font-semibold">{title}</h3>
       </summary>
@@ -436,7 +467,7 @@ function CollapsibleSection({
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md border bg-background/70 p-3">
+    <div className="rounded-sm border bg-background/70 p-3">
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className="mt-1 font-semibold">{value}</p>
     </div>

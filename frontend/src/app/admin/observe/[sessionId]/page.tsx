@@ -154,8 +154,8 @@ export default function ObservePage({ params }: PageProps) {
 
   if (!session) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-background text-foreground">
-        <div className="rounded-lg border bg-card p-6 text-sm text-muted-foreground">
+      <main className="dashboard-grid flex min-h-screen items-center justify-center bg-background p-6 text-foreground">
+        <div className="surface-panel relative z-[1] rounded-sm p-6 text-sm text-muted-foreground">
           {error ?? "Loading observer view..."}
         </div>
       </main>
@@ -164,8 +164,8 @@ export default function ObservePage({ params }: PageProps) {
 
   return (
     <div className="flex h-screen flex-col bg-background text-foreground">
-      <header className="flex items-center justify-between border-b bg-card/80 px-6 py-3">
-        <div>
+      <header className="flex items-center justify-between gap-4 border-b bg-card/84 px-5 py-3 shadow-sm backdrop-blur-xl">
+        <div className="min-w-0">
           <div className="flex items-center gap-2">
             <Eye className="h-5 w-5 text-primary" />
             <h1 className="text-lg font-semibold">Observer Mode</h1>
@@ -175,7 +175,7 @@ export default function ObservePage({ params }: PageProps) {
             {session.candidate_name} · {session.room_title} · read-only
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <Badge variant="outline">Timer: {remainingLabel}</Badge>
           <Badge variant={liveStatus === "Live" ? "default" : "outline"}>{liveStatus}</Badge>
           <Button type="button" variant="outline" size="sm" onClick={load} disabled={loading}>
@@ -193,8 +193,8 @@ export default function ObservePage({ params }: PageProps) {
 
       {error && <div className="border-b bg-destructive/10 px-6 py-2 text-sm text-destructive">{error}</div>}
 
-      <div className="grid min-h-0 flex-1 grid-cols-12">
-        <aside className="col-span-3 overflow-auto border-r bg-card/50 p-5">
+      <div className="page-enter grid min-h-0 flex-1 grid-cols-12 bg-background">
+        <aside className="col-span-3 overflow-auto border-r bg-card/42 p-5">
           {session.questions.length > 1 && (
             <div className="mb-4 space-y-2">
               {session.questions.map((question, index) => (
@@ -202,10 +202,10 @@ export default function ObservePage({ params }: PageProps) {
                   key={question.id}
                   type="button"
                   onClick={() => setActiveQuestionId(question.id)}
-                  className={`w-full rounded-md border p-3 text-left text-sm transition ${
+                  className={`w-full rounded-sm border p-3 text-left text-sm transition ${
                     activeQuestion?.id === question.id
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "bg-background hover:border-primary/60"
+                      ? "border-primary/30 bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                      : "bg-background/76 hover:border-primary/50"
                   }`}
                 >
                   <span className="text-xs opacity-75">Question {index + 1}</span>
@@ -215,7 +215,7 @@ export default function ObservePage({ params }: PageProps) {
             </div>
           )}
 
-          <div className="prose prose-sm max-w-none dark:prose-invert">
+          <div className="prose prose-sm max-w-none dark:prose-invert prose-pre:bg-card prose-pre:text-card-foreground">
             <h2>{activeQuestion?.title ?? "Problem"}</h2>
             <ReactMarkdown>{activeQuestion?.prompt ?? ""}</ReactMarkdown>
             <h3>Sample Input / Output</h3>
@@ -223,7 +223,7 @@ export default function ObservePage({ params }: PageProps) {
           </div>
         </aside>
 
-        <section className="col-span-6 min-h-0 border-r">
+        <section className="col-span-6 min-h-0 border-r bg-[#1e1e1e]">
           <Editor
             height="100%"
             defaultLanguage="python"
@@ -239,14 +239,14 @@ export default function ObservePage({ params }: PageProps) {
           />
         </section>
 
-        <aside className="col-span-3 flex min-h-0 flex-col">
+        <aside className="col-span-3 flex min-h-0 flex-col bg-card/38">
           <ScrollArea className="flex-1 p-4">
-            <div className="space-y-4">
+            <div className="list-enter space-y-4">
               {session.messages.map((msg) => (
                 <div
                   key={msg.id}
-                  className={`rounded-lg p-3 text-sm ${
-                    msg.role === "user" ? "ml-6 bg-primary text-primary-foreground" : "mr-6 bg-muted"
+                  className={`rounded-sm p-3 text-sm ${
+                    msg.role === "user" ? "ml-6 bg-primary text-primary-foreground shadow-md shadow-primary/15" : "mr-6 border bg-background/76"
                   }`}
                 >
                   {msg.message}
@@ -256,8 +256,8 @@ export default function ObservePage({ params }: PageProps) {
             </div>
           </ScrollArea>
 
-          <div className="border-t p-4">
-            <div className="rounded-md border bg-background/70 p-3 text-sm text-muted-foreground">
+          <div className="border-t bg-card/72 p-4">
+            <div className="rounded-sm border bg-background/70 p-3 text-sm text-muted-foreground">
               Code updates stream live. Session details and chat refresh every 5 seconds. Editing and chat are disabled.
             </div>
           </div>

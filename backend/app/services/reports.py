@@ -9,8 +9,19 @@ from app.models import ChatMessage, InterviewReport, Question, Room, Session
 from app.schemas import InterviewReportResponse
 from app.services.code_snapshots import get_code_snapshots
 from app.config import settings
-from app.services.configuration import get_ai_configuration
-from app.services.ai import generate_chat_completion
+from app.services.configuration import get_llm_configuration
+from app.services.llm import generate_chat_completion
+
+
+REPORT_EVALUATION_GUARDRAILS = """Non-negotiable report evaluation rules:
+- Starter/template code is platform-provided and must not be credited as candidate work.
+- Do not list imports, function signatures, main/input parsing, print calls, comments, or placeholder structure as candidate strengths when those lines come from the starter template.
+- Use the per-question unified diff as the primary evidence of candidate implementation.
+- If a question has no diff from the starter template, state that no candidate implementation was submitted for that question.
+- Credit only candidate-authored changes and candidate-stated reasoning from the transcript.
+- If the candidate only acknowledged the problem without implementing or explaining a concrete solution, do not describe that as a strength.
+"""
+
 
 def serialize_report(report: InterviewReport) -> InterviewReportResponse:
     try:
@@ -41,6 +52,32 @@ def _recommendation(tokens_used: int, message_count: int, code: str) -> str:
     if message_count >= 8 and tokens_used > 0:
         return "Needs review"
     return "Review recommended"
+
+
+def _parse_json_object(text: str) -> dict:
+    cleaned = text.strip()
+    if cleaned.startswith("```"):
+        lines = cleaned.splitlines()
+        if lines and lines[0].startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].startswith("```"):
+            lines = lines[:-1]
+        cleaned = "\n".join(lines).strip()
+
+    try:
+        parsed = json.loads(cleaned)
+        return parsed if isinstance(parsed, dict) else {}
+    except json.JSONDecodeError:
+        decoder = json.JSONDecoder()
+        for index, char in enumerate(cleaned):
+            if char != "{":
+                continue
+            try:
+                parsed, _ = decoder.raw_decode(cleaned[index:])
+            except json.JSONDecodeError:
+                continue
+            return parsed if isinstance(parsed, dict) else {}
+    return {}
 
 
 async def create_or_update_report(
@@ -77,20 +114,21 @@ async def create_or_update_report(
         "chat_turns": len(user_messages),
         "assistant_turns": len(assistant_messages),
         "assistant_code_messages": len(assistant_code_messages),
-        "tokens_used": session.tokens_used,
-        "max_tokens": room.max_tokens,
         "non_empty_code_lines": code_lines,
         "completed_at": (session.ended_at or datetime.now(timezone.utc)).isoformat(),
         "suspicious_flags": flags,
+        "code_evaluation": "",
     }
 
     # Generate Report using LLM Configuration
     summary = ""
     recommendation = ""
 
-    ai_config = await get_ai_configuration(db)
+    llm_config = await get_llm_configuration(db)
 
-    if settings.openrouter_api_key:
+    llm_api_key = llm_config.api_key_secret or settings.llm_provider_key
+
+    if llm_api_key:
         # Build prompt variables
         user_prompt_content = (
             f"Candidate Name: {session.candidate_name}\n"
@@ -99,11 +137,21 @@ async def create_or_update_report(
             f"Questions and Templates:\n"
         )
         for q in questions:
-            user_prompt_content += f"- Question: {q.title}\n  Prompt: {q.prompt}\n"
+            user_prompt_content += (
+                f"- Question: {q.title}\n"
+                f"  Prompt: {q.prompt}\n"
+                f"  Starter Template Code:\n{q.starter_code}\n"
+            )
 
-        user_prompt_content += "\nCandidate's Final Submissions:\n"
+        user_prompt_content += "\nCandidate's Final Submissions and Template Diffs:\n"
         for snapshot in code_snapshots:
-            user_prompt_content += f"- Question: {snapshot.question_title}\n  Final Code:\n{snapshot.final_code}\n"
+            diff_text = "\n".join(snapshot.diff) if snapshot.diff else "No changes from starter template."
+            user_prompt_content += (
+                f"- Question: {snapshot.question_title}\n"
+                f"  Changed From Starter: {'yes' if snapshot.diff else 'no'}\n"
+                f"  Final Code:\n{snapshot.final_code}\n"
+                f"  Unified Diff From Starter Template:\n{diff_text}\n"
+            )
 
         user_prompt_content += "\nAssistant Involvement Facts:\n"
         if assistant_code_messages:
@@ -120,33 +168,28 @@ async def create_or_update_report(
         if not flags:
             user_prompt_content += "- No suspicious telemetry observed.\n"
 
-        user_prompt_content += "\nCandidate-AI Chat Transcript:\n"
+        user_prompt_content += "\nCandidate Chat Transcript:\n"
         for msg in messages:
             user_prompt_content += f"[{msg.role.upper()}]: {msg.message}\n"
 
         try:
             llm_response = await generate_chat_completion(
-                settings.openrouter_api_key,
-                ai_config.api_url,
-                ai_config.model,
+                llm_api_key,
+                llm_config.api_url,
+                llm_config.model,
                 [
-                    {"role": "system", "content": ai_config.report_prompt},
+                    {"role": "system", "content": f"{llm_config.report_prompt}\n\n{REPORT_EVALUATION_GUARDRAILS}"},
                     {"role": "user", "content": user_prompt_content},
                 ]
             )
 
-            # Strip markdown json block wrappers if LLM returned them
-            cleaned = llm_response.strip()
-            if cleaned.startswith("```"):
-                lines = cleaned.splitlines()
-                if lines[0].startswith("```"):
-                    lines = lines[1:]
-                if lines and lines[-1].startswith("```"):
-                    lines = lines[:-1]
-                cleaned = "\n".join(lines).strip()
-
-            parsed = json.loads(cleaned)
+            parsed = _parse_json_object(llm_response)
+            if not parsed:
+                raise ValueError("LLM report response did not contain a JSON object")
             summary = parsed.get("summary", "")
+            code_evaluation = parsed.get("code_evaluation", "")
+            if isinstance(code_evaluation, str):
+                rubric["code_evaluation"] = code_evaluation
             recommendation = parsed.get("recommendation", "")[:40] # cap length just in case
         except Exception:
             # Fallback to full raw response as summary if it wasn't valid JSON
@@ -164,6 +207,16 @@ async def create_or_update_report(
             f"{len(assistant_code_messages)}. "
             "This report is based on saved code and chat history only; no sandbox execution was run."
         )
+    if not rubric["code_evaluation"]:
+        if not final_code.strip():
+            rubric["code_evaluation"] = "No final code was synced for evaluation."
+        else:
+            rubric["code_evaluation"] = (
+                f"Final code exists for {changed_questions} of {len(questions)} question(s) with "
+                f"{code_lines} non-empty line(s). Review the per-question final code and template diff above "
+                "for correctness, complexity, edge-case handling, and implementation quality. No sandbox execution "
+                "results are available in this report."
+            )
     if not recommendation:
         recommendation = _recommendation(session.tokens_used, len(user_messages), final_code)
 

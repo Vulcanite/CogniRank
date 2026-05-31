@@ -3,9 +3,7 @@ import uuid
 from collections import defaultdict
 from typing import Any
 
-
 LiveCodeEvent = dict[str, Any]
-
 
 class LiveCodeHub:
     def __init__(self) -> None:

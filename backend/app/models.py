@@ -155,7 +155,6 @@ class ChatMessage(SQLModel, table=True):
     )
     role: str = Field(max_length=20)
     message: str = Field(sa_column=Column(Text, nullable=False))
-    provider_metadata_json: str = Field(default="{}", sa_column=Column(Text, nullable=False))
     timestamp: datetime = Field(
         default_factory=utc_now,
         sa_column=Column(DateTime(timezone=True), nullable=False),
@@ -184,17 +183,18 @@ class InterviewReport(SQLModel, table=True):
     )
 
 
-class AIConfiguration(SQLModel, table=True):
-    __tablename__ = "ai_configuration"
+class LLMConfiguration(SQLModel, table=True):
+    __tablename__ = "llm_configuration"
 
     id: str = Field(default="default", primary_key=True, max_length=40)
     api_url: str
+    api_key_secret: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
     model: str
     system_prompt: str = Field(sa_column=Column(Text, nullable=False))
+    chat_context_prompt: str = Field(default="", sa_column=Column(Text, nullable=False))
+    brute_force_prompt: str = Field(default="", sa_column=Column(Text, nullable=False))
     report_prompt: str = Field(sa_column=Column(Text, nullable=False))
     force_brute_force: bool = Field(default=False)
-    reasoning_enabled: bool = Field(default=False)
-    reasoning_config_json: str = Field(default="{}", sa_column=Column(Text, nullable=False))
     updated_at: datetime = Field(
         default_factory=utc_now,
         sa_column=Column(DateTime(timezone=True), nullable=False),

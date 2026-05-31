@@ -96,18 +96,21 @@ export type AdminLoginResponse = {
   username: string;
 };
 
-export type AIConfiguration = {
+export type LLMConfiguration = {
   api_url: string;
+  api_key_configured: boolean;
   model: string;
   system_prompt: string;
+  chat_context_prompt: string;
+  brute_force_prompt: string;
   report_prompt: string;
   force_brute_force: boolean;
-  reasoning_enabled: boolean;
-  reasoning_config_json: string;
   updated_at: string;
 };
 
-export type AIConfigurationPayload = Omit<AIConfiguration, "updated_at">;
+export type LLMConfigurationPayload = Omit<LLMConfiguration, "updated_at" | "api_key_configured"> & {
+  api_key?: string | null;
+};
 
 export type InterviewReport = {
   id: string;
@@ -375,13 +378,23 @@ export function closeAdminSession(sessionId: string, token: string) {
   }, token);
 }
 
-export function getAIConfiguration(token: string) {
-  return request<AIConfiguration>("/api/admin/config", undefined, token);
+export function getLLMConfiguration(token: string) {
+  return request<LLMConfiguration>("/api/admin/config", undefined, token);
 }
 
-export function updateAIConfiguration(payload: AIConfigurationPayload, token: string) {
-  return request<AIConfiguration>("/api/admin/config", {
+export function updateLLMConfiguration(payload: LLMConfigurationPayload, token: string) {
+  return request<LLMConfiguration>("/api/admin/config", {
     method: "PUT",
+    body: JSON.stringify(payload),
+  }, token);
+}
+
+export function listLLMModels(
+  payload: { api_url?: string | null; api_key?: string | null },
+  token: string
+) {
+  return request<{ models: string[] }>("/api/admin/config/models", {
+    method: "POST",
     body: JSON.stringify(payload),
   }, token);
 }

@@ -126,13 +126,14 @@ export default function AdminPage() {
 
   return (
     <AdminShell user={user}>
-      <div className="space-y-6">
-        <form onSubmit={handleCreateRoom} className="rounded-lg border bg-card/95 shadow-sm">
+      <div className="page-enter space-y-6">
+        <form onSubmit={handleCreateRoom} className="surface-panel overflow-hidden rounded-sm">
           <section className="grid gap-0 xl:grid-cols-[minmax(0,1fr)_410px]">
             <div className="border-b p-4 md:p-6 xl:border-b-0 xl:border-r">
             <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
               <div>
-                <h2 className="text-xl font-semibold">Build a Coding Round</h2>
+                <span className="command-chip">Room builder</span>
+                <h2 className="mt-1 text-2xl font-semibold">Build a Coding Round</h2>
                 <p className="mt-1 text-sm text-muted-foreground">Choose questions, invite a candidate, and set the timer in one flow.</p>
               </div>
               <Button asChild variant="outline">
@@ -150,15 +151,15 @@ export default function AdminPage() {
                   className="pl-9"
                 />
               </div>
-              <div className="flex rounded-md border bg-background p-1">
+              <div className="flex rounded-sm border bg-background/70 p-1 shadow-inner">
                 {difficultyOrder.map((item) => (
                   <button
                     key={item}
                     type="button"
                     onClick={() => setDifficulty(item)}
                     className={cn(
-                      "rounded-sm px-3 py-1.5 text-sm transition",
-                      difficulty === item ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                      "rounded-sm px-3 py-1.5 text-sm font-medium transition",
+                      difficulty === item ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
                     )}
                   >
                     {item}
@@ -168,9 +169,9 @@ export default function AdminPage() {
             </div>
 
             {loading ? (
-              <div className="mt-6 rounded-md border bg-background/70 p-6 text-sm text-muted-foreground">Loading dashboard...</div>
+              <div className="mt-6 rounded-sm border bg-background/70 p-6 text-sm text-muted-foreground">Loading dashboard...</div>
             ) : (
-              <div className="mt-6 grid gap-3">
+              <div className="list-enter mt-6 grid gap-3">
                 {filteredQuestions.map((question) => {
                   const checked = selectedIds.includes(question.id);
                   return (
@@ -179,14 +180,14 @@ export default function AdminPage() {
                       type="button"
                       onClick={() => toggleQuestion(question.id)}
                       className={cn(
-                        "group rounded-lg border bg-background/80 p-4 text-left transition hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-md",
-                        checked && "border-primary bg-primary/10 shadow-sm"
+                        "interactive-lift group rounded-sm border bg-background/72 p-4 text-left hover:border-primary/50 hover:shadow-md hover:shadow-primary/10",
+                        checked && "border-primary bg-primary/10 shadow-sm shadow-primary/10"
                       )}
                     >
                       <div className="flex gap-4">
                         <span
                           className={cn(
-                            "mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded border",
+                            "mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-sm border",
                             checked ? "border-primary bg-primary text-primary-foreground" : "bg-card"
                           )}
                         >
@@ -200,7 +201,7 @@ export default function AdminPage() {
                             </Badge>
                           </span>
                           <span className="mt-2 block text-sm leading-6 text-muted-foreground">{question.prompt}</span>
-                          <span className="mt-3 block rounded-md border bg-card p-3 font-mono text-xs text-muted-foreground">
+                          <span className="mt-3 block rounded-sm border bg-card/80 p-3 font-mono text-xs text-muted-foreground">
                             {question.sample_input_output}
                           </span>
                         </span>
@@ -212,10 +213,11 @@ export default function AdminPage() {
             )}
               </div>
 
-            <aside className="p-5">
+            <aside className="bg-card/38 p-5">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-xl font-semibold">Round Settings</h2>
+                  <span className="command-chip">Controls</span>
+                  <h2 className="mt-1 text-xl font-semibold">Round Settings</h2>
                   <p className="mt-1 text-sm text-muted-foreground">Access, budget, and duration.</p>
                 </div>
                 <Clock className="h-5 w-5 text-primary" />
@@ -256,12 +258,12 @@ export default function AdminPage() {
                   <p className="text-sm font-medium">Selected Questions</p>
                   <div className="max-h-64 space-y-2 overflow-auto pr-1">
                     {selectedQuestions.length === 0 ? (
-                      <div className="rounded-md border border-dashed bg-background/70 p-4 text-sm text-muted-foreground">No questions selected.</div>
+                      <div className="rounded-sm border border-dashed bg-background/70 p-4 text-sm text-muted-foreground">No questions selected.</div>
                     ) : (
                       selectedQuestions.map((question, index) => (
-                        <div key={question.id} className="rounded-md border bg-background/70 p-3">
+                        <div key={question.id} className="rounded-sm border bg-background/72 p-3">
                           <div className="flex items-start gap-3">
-                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-primary text-xs font-semibold text-primary-foreground">{index + 1}</span>
+                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-sm bg-primary font-mono text-xs font-semibold text-primary-foreground">{index + 1}</span>
                             <div className="min-w-0 flex-1">
                               <p className="text-sm font-medium">{question.title}</p>
                               <p className="mt-1 text-xs text-muted-foreground">{question.difficulty}</p>
@@ -285,7 +287,7 @@ export default function AdminPage() {
               </Button>
 
               {generatedRoom && (
-                <div className="mt-4 rounded-lg border bg-primary p-4 text-primary-foreground shadow-sm">
+                <div className="console-glow mt-4 rounded-sm border border-primary/20 bg-primary p-4 text-primary-foreground">
                   <p className="text-sm opacity-80">Generated room code</p>
                   <div className="mt-3 flex items-center justify-between gap-3">
                     <p className="font-mono text-4xl font-semibold tracking-normal">{generatedRoom.room_code}</p>
@@ -307,7 +309,7 @@ export default function AdminPage() {
           </section>
         </form>
 
-        <section className="rounded-lg border bg-card/95 p-5 shadow-sm">
+        <section className="surface-panel rounded-sm p-5">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-semibold">Recent Coding Rounds</h2>
@@ -317,12 +319,12 @@ export default function AdminPage() {
               <Link href="/admin/history">View history</Link>
             </Button>
           </div>
-          <div className="mt-4 grid gap-2">
+          <div className="list-enter mt-4 grid gap-2">
             {sessions.slice(0, 5).map((session) => (
               <Link
                 key={session.session_id}
                 href={`/admin/history?session=${session.session_id}`}
-                className="grid gap-3 rounded-md border bg-background/70 p-3 text-sm transition hover:border-primary/60 md:grid-cols-[1fr_130px_120px]"
+                className="interactive-lift grid gap-3 rounded-sm border bg-background/70 p-3 text-sm hover:border-primary/50 hover:shadow-md hover:shadow-primary/10 md:grid-cols-[1fr_130px_120px]"
               >
                 <span>
                   <span className="font-medium">{session.candidate_name}</span>
@@ -334,7 +336,7 @@ export default function AdminPage() {
                 </span>
               </Link>
             ))}
-            {sessions.length === 0 && <p className="rounded-md border bg-background/70 p-4 text-sm text-muted-foreground">No candidate rounds yet.</p>}
+            {sessions.length === 0 && <p className="rounded-sm border bg-background/70 p-4 text-sm text-muted-foreground">No candidate rounds yet.</p>}
           </div>
         </section>
       </div>
@@ -356,7 +358,7 @@ function displayStatus(status: string) {
 
 function Metric({ label, value, icon: Icon }: { label: string; value: string; icon: ComponentType<{ className?: string }> }) {
   return (
-    <div className="rounded-lg border bg-card/95 p-4 shadow-sm">
+    <div className="surface-panel rounded-sm p-4">
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">{label}</p>
         <Icon className="h-5 w-5 text-primary" />

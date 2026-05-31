@@ -5,8 +5,9 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     database_url: str = "postgresql+asyncpg://interview:interview@localhost:5432/interview_platform"
-    openrouter_api_key: str = ""
-    openrouter_model: str = "openai/gpt-4o-mini"
+    llm_provider_key: str = ""
+    llm_provider_url: str = "https://openrouter.ai/api/v1"
+    llm_provider_model: str = "openai/gpt-4o-mini"
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
     admin_username: str = "admin"
     admin_password: str = "admin123"

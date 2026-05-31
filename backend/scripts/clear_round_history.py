@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Clear coding round history while preserving question bank and AI config.
+"""Clear coding round history while preserving question bank and LLM config.
 
 Dry-run by default:
     python scripts/clear_round_history.py
@@ -97,7 +97,7 @@ async def clear_history(*, apply: bool, force_active: bool) -> int:
 
         after = await collect_counts(db)
         print_counts("\nRound history rows after delete:", after)
-        print("\nCleared round history. Preserved questions, organizations, and AI configuration.")
+        print("\nCleared round history. Preserved questions, organizations, and LLM configuration.")
         return 0
 
 
@@ -105,7 +105,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
             "Clear coding round history tables from the configured database. "
-            "Question bank rows and AI configuration are preserved."
+            "Question bank rows and LLM configuration are preserved."
         )
     )
     parser.add_argument(

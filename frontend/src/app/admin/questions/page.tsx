@@ -33,6 +33,8 @@ export default function QuestionBankPage() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<QuestionPayload>(emptyForm);
+  const [sampleInput, setSampleInput] = useState("");
+  const [sampleOutput, setSampleOutput] = useState("");
   const [tagInput, setTagInput] = useState("");
   const [query, setQuery] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
@@ -69,12 +71,15 @@ export default function QuestionBankPage() {
   function startCreate() {
     setEditingId(null);
     setForm(emptyForm);
+    setSampleInput("");
+    setSampleOutput("");
     setTagInput("");
     setError(null);
     setModalOpen(true);
   }
 
   function startEdit(question: Question) {
+    const sample = parseSampleInputOutput(question.sample_input_output);
     setEditingId(question.id);
     setForm({
       title: question.title,
@@ -84,6 +89,8 @@ export default function QuestionBankPage() {
       starter_code: question.starter_code,
       tags: question.tags,
     });
+    setSampleInput(sample.input);
+    setSampleOutput(sample.output);
     setTagInput(question.tags.join(", "));
     setError(null);
     setModalOpen(true);
@@ -98,6 +105,8 @@ export default function QuestionBankPage() {
     setModalOpen(false);
     setEditingId(null);
     setForm(emptyForm);
+    setSampleInput("");
+    setSampleOutput("");
     setTagInput("");
   }
 
@@ -108,6 +117,7 @@ export default function QuestionBankPage() {
     setError(null);
     const payload = {
       ...form,
+      sample_input_output: formatSampleInputOutput(sampleInput, sampleOutput),
       tags: tagInput
         .split(",")
         .map((tag) => tag.trim())
@@ -144,9 +154,11 @@ export default function QuestionBankPage() {
   if (!ready) return null;
   if (!token) return <AdminLogin onLogin={acceptLogin} />;
 
+  const modalTags = parseTags(tagInput);
+
   return (
     <AdminShell user={user}>
-      <section className="rounded-lg border bg-card/95 p-5 shadow-sm">
+      <section className="surface-panel page-enter rounded-sm p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h2 className="text-xl font-semibold">Question Bank</h2>
@@ -177,14 +189,14 @@ export default function QuestionBankPage() {
           </p>
         )}
 
-        <div className="mt-5 grid gap-3">
+        <div className="list-enter mt-5 grid gap-3">
           {loading ? (
-            <div className="rounded-md border bg-background/70 p-5 text-sm text-muted-foreground">
+            <div className="rounded-sm border bg-background/70 p-5 text-sm text-muted-foreground">
               Loading questions...
             </div>
           ) : (
             filteredQuestions.map((question) => (
-              <article key={question.id} className="rounded-lg border bg-background/75 p-4">
+              <article key={question.id} className="interactive-lift rounded-sm border bg-background/75 p-4 hover:border-primary/45 hover:shadow-md hover:shadow-primary/10">
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
@@ -196,7 +208,7 @@ export default function QuestionBankPage() {
                       {question.tags.map((tag) => (
                         <span
                           key={tag}
-                          className="rounded-full border bg-card px-2 py-0.5 text-xs text-muted-foreground"
+                          className="rounded-full border bg-card/80 px-2.5 py-1 font-mono text-xs text-muted-foreground"
                         >
                           {tag}
                         </span>
@@ -214,10 +226,10 @@ export default function QuestionBankPage() {
                   </div>
                 </div>
                 <div className="mt-4 grid gap-3 md:grid-cols-2">
-                  <pre className="max-h-36 overflow-auto rounded-md border bg-card p-3 text-xs text-muted-foreground">
+                  <pre className="max-h-36 overflow-auto rounded-sm border bg-card p-3 text-xs text-muted-foreground">
                     {question.sample_input_output}
                   </pre>
-                  <pre className="max-h-36 overflow-auto rounded-md border bg-card p-3 text-xs text-muted-foreground">
+                  <pre className="max-h-36 overflow-auto rounded-sm border bg-card p-3 text-xs text-muted-foreground">
                     {question.starter_code || "# No starter code"}
                   </pre>
                 </div>
@@ -228,17 +240,17 @@ export default function QuestionBankPage() {
       </section>
 
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
+        <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-md">
           <form
             onSubmit={saveQuestion}
             role="dialog"
             aria-modal="true"
             aria-labelledby="question-modal-title"
-            className="max-h-[92vh] w-full max-w-3xl overflow-auto rounded-lg border bg-card p-5 shadow-2xl shadow-black/25"
+            className="surface-panel modal-panel max-h-[92vh] w-full max-w-3xl overflow-auto rounded-sm p-5"
           >
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground">
+                <div className="console-glow flex h-10 w-10 shrink-0 items-center justify-center rounded-sm bg-primary text-primary-foreground">
                   <BookOpen className="h-5 w-5" />
                 </div>
                 <div>
@@ -302,11 +314,23 @@ export default function QuestionBankPage() {
                   onChange={(event) => setTagInput(event.target.value)}
                   placeholder="array, hash-map"
                 />
+                {modalTags.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {modalTags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-full border bg-card/80 px-2.5 py-1 font-mono text-xs text-muted-foreground"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2 md:col-span-2">
                 <label className="text-sm font-medium" htmlFor="prompt">
-                  Prompt
+                  Problem Statement
                 </label>
                 <Textarea
                   id="prompt"
@@ -318,19 +342,32 @@ export default function QuestionBankPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium" htmlFor="sample">
-                  Sample Input / Output
+                <label className="text-sm font-medium" htmlFor="sampleInput">
+                  Sample Input
                 </label>
                 <Textarea
-                  id="sample"
-                  value={form.sample_input_output}
-                  onChange={(event) => setForm({ ...form, sample_input_output: event.target.value })}
+                  id="sampleInput"
+                  value={sampleInput}
+                  onChange={(event) => setSampleInput(event.target.value)}
                   rows={8}
                   required
                 />
               </div>
 
               <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="sampleOutput">
+                  Expected Output
+                </label>
+                <Textarea
+                  id="sampleOutput"
+                  value={sampleOutput}
+                  onChange={(event) => setSampleOutput(event.target.value)}
+                  rows={8}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
                 <label className="text-sm font-medium" htmlFor="starter">
                   Starter Code
                 </label>
@@ -358,4 +395,25 @@ export default function QuestionBankPage() {
       )}
     </AdminShell>
   );
+}
+
+function parseTags(value: string) {
+  return value
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+}
+
+function parseSampleInputOutput(value: string) {
+  const trimmed = value.trim();
+  const match = trimmed.match(/^Input:\s*([\s\S]*?)(?:\r?\n\s*|\s+)Output:\s*([\s\S]*)$/i);
+  if (!match) return { input: trimmed, output: "" };
+  return {
+    input: match[1].trim(),
+    output: match[2].trim(),
+  };
+}
+
+function formatSampleInputOutput(input: string, output: string) {
+  return `Input: ${input.trim()}\nOutput: ${output.trim()}`;
 }

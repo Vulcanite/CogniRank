@@ -10,15 +10,19 @@ from sse_starlette.sse import EventSourceResponse
 from app.database import get_session
 from app.models import ChatMessage, Room, Session
 from app.schemas import (
-    AIConfigurationResponse,
-    AIConfigurationUpdateRequest,
+    LLMModelListRequest,
+    LLMModelListResponse,
+    LLMConfigurationResponse,
+    LLMConfigurationUpdateRequest,
     AdminSessionDetailResponse,
     AdminSessionSummaryResponse,
     ChatMessageResponse,
 )
 from app.services.auth import require_admin
+from app.config import settings
+from app.services.ai import list_available_models
 from app.services.code_snapshots import get_code_by_question, get_code_snapshots
-from app.services.configuration import get_ai_configuration, touch_ai_configuration
+from app.services.configuration import get_llm_configuration, touch_llm_configuration
 from app.services.live_code import live_code_hub
 from app.services.questions import get_room_questions, serialize_question
 from app.services.reports import create_or_update_report, get_report_for_session, serialize_report
@@ -27,48 +31,68 @@ from app.services.telemetry import get_telemetry_events
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
-
-def _serialize_ai_config(config) -> AIConfigurationResponse:
-    return AIConfigurationResponse(
+def _serialize_llm_config(config) -> LLMConfigurationResponse:
+    return LLMConfigurationResponse(
         api_url=config.api_url,
+        api_key_configured=bool(config.api_key_secret or settings.llm_provider_key),
         model=config.model,
         system_prompt=config.system_prompt,
+        chat_context_prompt=config.chat_context_prompt,
+        brute_force_prompt=config.brute_force_prompt,
         report_prompt=config.report_prompt,
         force_brute_force=config.force_brute_force,
-        reasoning_enabled=config.reasoning_enabled,
-        reasoning_config_json=config.reasoning_config_json,
         updated_at=config.updated_at,
     )
 
 
-@router.get("/config", response_model=AIConfigurationResponse)
+@router.get("/config", response_model=LLMConfigurationResponse)
 async def get_config(
     db: AsyncSession = Depends(get_session),
     _: str = Depends(require_admin),
-) -> AIConfigurationResponse:
-    config = await get_ai_configuration(db)
-    return _serialize_ai_config(config)
+) -> LLMConfigurationResponse:
+    config = await get_llm_configuration(db)
+    return _serialize_llm_config(config)
 
 
-@router.put("/config", response_model=AIConfigurationResponse)
+@router.put("/config", response_model=LLMConfigurationResponse)
 async def update_config(
-    payload: AIConfigurationUpdateRequest,
+    payload: LLMConfigurationUpdateRequest,
     db: AsyncSession = Depends(get_session),
     _: str = Depends(require_admin),
-) -> AIConfigurationResponse:
-    config = await get_ai_configuration(db)
+) -> LLMConfigurationResponse:
+    config = await get_llm_configuration(db)
     config.api_url = payload.api_url
+    if payload.api_key:
+        config.api_key_secret = payload.api_key
     config.model = payload.model
     config.system_prompt = payload.system_prompt
+    config.chat_context_prompt = payload.chat_context_prompt
+    config.brute_force_prompt = payload.brute_force_prompt
     config.report_prompt = payload.report_prompt
     config.force_brute_force = payload.force_brute_force
-    config.reasoning_enabled = payload.reasoning_enabled
-    config.reasoning_config_json = payload.reasoning_config_json
-    touch_ai_configuration(config)
+    touch_llm_configuration(config)
     db.add(config)
     await db.commit()
     await db.refresh(config)
-    return _serialize_ai_config(config)
+    return _serialize_llm_config(config)
+
+
+@router.post("/config/models", response_model=LLMModelListResponse)
+async def list_models(
+    payload: LLMModelListRequest,
+    db: AsyncSession = Depends(get_session),
+    _: str = Depends(require_admin),
+) -> LLMModelListResponse:
+    config = await get_llm_configuration(db)
+    api_url = payload.api_url or config.api_url
+    api_key = payload.api_key or config.api_key_secret or settings.llm_provider_key
+    if not api_key:
+        raise HTTPException(status_code=400, detail="LLM provider key is not configured")
+    try:
+        models = await list_available_models(api_key, api_url)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Failed to fetch models: {exc}") from exc
+    return LLMModelListResponse(models=models)
 
 
 async def _serialize_session_summary(

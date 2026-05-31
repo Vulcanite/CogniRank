@@ -2,8 +2,13 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.config import settings
-from app.models import AIConfiguration, Question, Room, Session, utc_now
-from app.services.ai import DEFAULT_REPORT_PROMPT, SYSTEM_PROMPT, DEFAULT_AI_URL
+from app.models import LLMConfiguration, Question, Room, Session, utc_now
+from app.services.ai import (
+    DEFAULT_BRUTE_FORCE_PROMPT,
+    DEFAULT_CHAT_CONTEXT_PROMPT,
+    DEFAULT_REPORT_PROMPT,
+    SYSTEM_PROMPT,
+)
 from app.services.code_snapshots import ensure_question_code_rows
 from app.services.questions import get_room_questions
 
@@ -22,7 +27,6 @@ SEEDED_QUESTIONS = [
         "starter_code": (
             "import sys\n\n"
             "def solve(nums, target):\n"
-            "    # Explain your approach before filling this in.\n"
             "    pass\n\n"
             "def main():\n"
             "    data = sys.stdin.read().strip().split()\n"
@@ -48,7 +52,6 @@ SEEDED_QUESTIONS = [
         "starter_code": (
             "import sys\n\n"
             "def is_valid(s):\n"
-            "    # Explain which structure tracks open brackets.\n"
             "    pass\n\n"
             "def main():\n"
             "    s = sys.stdin.read().strip()\n"
@@ -71,7 +74,6 @@ SEEDED_QUESTIONS = [
             "import ast\n"
             "import sys\n\n"
             "def merge(intervals):\n"
-            "    # State how ordering helps before coding the merge.\n"
             "    pass\n\n"
             "def main():\n"
             "    raw = sys.stdin.read().strip()\n"
@@ -94,7 +96,6 @@ SEEDED_QUESTIONS = [
         "starter_code": (
             "import sys\n\n"
             "def first_unique_char(s):\n"
-            "    # Explain how you will count and preserve order.\n"
             "    pass\n\n"
             "def main():\n"
             "    s = sys.stdin.read().strip()\n"
@@ -116,7 +117,6 @@ SEEDED_QUESTIONS = [
         "starter_code": (
             "import sys\n\n"
             "def top_k_frequent(nums, k):\n"
-            "    # Explain how frequency and ranking will be represented.\n"
             "    pass\n\n"
             "def main():\n"
             "    data = [int(x) for x in sys.stdin.read().strip().split()]\n"
@@ -143,7 +143,6 @@ SEEDED_QUESTIONS = [
         "starter_code": (
             "import sys\n\n"
             "def min_window(source, target):\n"
-            "    # Explain what the moving window must maintain.\n"
             "    pass\n\n"
             "def main():\n"
             "    lines = [line.rstrip(\"\\n\") for line in sys.stdin.readlines()]\n"
@@ -162,24 +161,24 @@ async def seed_questions(db: AsyncSession) -> None:
         result = await db.exec(select(Question).where(Question.slug == item["slug"]))
         existing = result.first()
         if existing is not None:
-            if not existing.starter_code:
+            if not existing.starter_code or existing.starter_code != item["starter_code"]:
                 existing.starter_code = item["starter_code"]
                 db.add(existing)
             continue
         db.add(Question(**item))
 
-    config_result = await db.exec(select(AIConfiguration).where(AIConfiguration.id == "default"))
+    config_result = await db.exec(select(LLMConfiguration).where(LLMConfiguration.id == "default"))
     config = config_result.first()
     if config is None:
         db.add(
-            AIConfiguration(
-                api_url=DEFAULT_AI_URL,
-                model=settings.openrouter_model,
+            LLMConfiguration(
+                api_url=settings.llm_provider_url,
+                model=settings.llm_provider_model,
                 system_prompt=SYSTEM_PROMPT,
+                chat_context_prompt=DEFAULT_CHAT_CONTEXT_PROMPT,
+                brute_force_prompt=DEFAULT_BRUTE_FORCE_PROMPT,
                 report_prompt=DEFAULT_REPORT_PROMPT,
                 force_brute_force=False,
-                reasoning_enabled=False,
-                reasoning_config_json="{}",
             )
         )
 

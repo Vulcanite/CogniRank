@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, KeyRound, UserRound } from "lucide-react";
+import { ArrowRight, KeyRound, LockKeyhole, UserRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -40,11 +40,11 @@ export default function JoinPage() {
 
   return (
     <main className="dashboard-grid flex min-h-screen items-center justify-center bg-background p-4 text-foreground md:p-8">
-      <section className="grid w-full max-w-5xl overflow-hidden rounded-lg border bg-card shadow-2xl shadow-black/10 md:grid-cols-[0.9fr_1fr]">
+      <section className="surface-panel page-enter relative z-[1] grid w-full max-w-5xl overflow-hidden rounded-sm md:grid-cols-[0.9fr_1fr]">
         <div className="paper-panel hidden flex-col justify-between p-8 md:flex">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary text-primary-foreground">
+              <div className="console-glow flex h-10 w-10 items-center justify-center rounded-sm bg-primary text-primary-foreground">
                 <UserRound className="h-5 w-5" />
               </div>
               <span className="font-semibold">Candidate Entry</span>
@@ -52,17 +52,21 @@ export default function JoinPage() {
             <ThemeToggle />
           </div>
           <div>
-            <p className="text-sm font-medium uppercase text-muted-foreground">Interview session</p>
-            <h1 className="mt-4 text-4xl font-semibold leading-tight">
-              Join with the room code from your interviewer.
+            <span className="command-chip">Interview session</span>
+            <h1 className="mt-4 text-5xl font-semibold leading-[1.04]">
+              Verify identity. Enter the room.
             </h1>
           </div>
-          <div className="rounded-md border bg-background/65 p-4 text-sm text-muted-foreground">
-            Secure candidate workspace
+          <div className="rounded-sm border bg-background/65 p-4 text-sm text-muted-foreground backdrop-blur">
+            <div className="flex items-center gap-2 text-foreground">
+              <LockKeyhole className="h-4 w-4 text-primary" />
+              <span className="font-medium">Email and room code required</span>
+            </div>
+            <p className="mt-2 leading-6">Use the invite details exactly as provided by the interviewer.</p>
           </div>
         </div>
 
-        <div className="p-6 md:p-8">
+        <div className="bg-background/90 p-6 backdrop-blur md:p-8">
           <div className="mb-8 flex items-center justify-between md:hidden">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary text-primary-foreground">
@@ -76,7 +80,7 @@ export default function JoinPage() {
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <h1 className="text-2xl font-semibold">Join Interview</h1>
-              <p className="mt-1 text-sm text-muted-foreground">Candidate profile</p>
+              <p className="mt-1 text-sm text-muted-foreground">Candidate profile and room access</p>
             </div>
 
             <div className="space-y-2">
